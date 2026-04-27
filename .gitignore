@@ -1,0 +1,16 @@
+# IAR BrowseInfo (generated)
+EWARM/*/BrowseInfo/
+
+# IAR build output
+EWARM/*/Debug/
+EWARM/*/Release/
+EWARM/*/settings/
+*.pbd
+*.pbd.browse
+*.pbw
+*.pbi
+*.pbi.dep
+*.dep
+build.ninja
+.ninja_deps
+.ninja_log

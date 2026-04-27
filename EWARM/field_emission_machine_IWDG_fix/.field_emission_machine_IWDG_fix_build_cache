@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<BuildDb>
+    <Tool>
+        <Name>linker</Name>
+        <Parent>
+            <Path>C:\Users\pedro\Documents\important\institute of physics\Field emission\field_emission_machine\field_emission_machine_IWDG_fix\EWARM\field_emission_machine_IWDG_fix\Exe\field_emission_machine_IWDG_fix.out</Path>
+            <Output>
+                <Path>C:\Users\pedro\Documents\important\institute of physics\Field emission\field_emission_machine\field_emission_machine_IWDG_fix\EWARM\field_emission_machine_IWDG_fix\List\field_emission_machine_IWDG_fix.map</Path>
+            </Output>
+        </Parent>
+        <Parent>
+            <Path>C:\Users\pedro\Documents\important\institute of physics\Field emission\field_emission_machine_IWDG_fix\EWARM\field_emission_machine_IWDG_fix\Exe\field_emission_machine_IWDG_fix.out</Path>
+            <Output>
+                <Path>C:\Users\pedro\Documents\important\institute of physics\Field emission\field_emission_machine_IWDG_fix\EWARM\field_emission_machine_IWDG_fix\List\field_emission_machine_IWDG_fix.map</Path>
+            </Output>
+        </Parent>
+    </Tool>
+</BuildDb>
