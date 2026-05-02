@@ -21,11 +21,10 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "main.h"
-extern IWDG_HandleTypeDef hiwdg;
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+extern IWDG_HandleTypeDef hiwdg;
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/

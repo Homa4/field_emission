@@ -1,4 +1,4 @@
-#include "dac_control.h"
+#include "DAC_control.h"
 extern I2C_HandleTypeDef hi2c2;
 
 void DAC_SetVoltage(uint16_t voltage) {

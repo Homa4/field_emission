@@ -19,11 +19,13 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "cmsis_os.h"
-#include "DAC_control.h"
-
+#include "usb_device.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "DAC_control.h"
+#include "ADC_control.h"
+// #include "comm_control.h"
 
 /* USER CODE END Includes */
 
@@ -34,16 +36,6 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
-/* USER CODE END PD */
-
-/* Private macro -------------------------------------------------------------*/
-/* USER CODE BEGIN PM */
-
-/* USER CODE END PM */
-
-/* Private variables ---------------------------------------------------------*/
-
 /*---------------------------------------------------------Main variables----------------------------------------*/
 float start_voltage = 0;                                         /* Min. anode voltage*/
 float end_voltage = 0;                                           /* Max. anode voltage*/
@@ -54,6 +46,14 @@ int number_of_points_in_scan = 0;                                /* Number of po
 int number_of_points_in_scan_delay = 0;                          /* Duration of one step for numofpoint method*/
 int npcc = 0;                                                    /* Number of Points for Calculation Correlation*/ 
 
+/* USER CODE END PD */
+
+/* Private macro -------------------------------------------------------------*/
+/* USER CODE BEGIN PM */
+
+/* USER CODE END PM */
+
+/* Private variables ---------------------------------------------------------*/
 I2C_HandleTypeDef hi2c2;
 
 IWDG_HandleTypeDef hiwdg;
@@ -90,7 +90,7 @@ const osSemaphoreAttr_t myBinarySem01_attributes = {
   .name = "myBinarySem01"
 };
 /* USER CODE BEGIN PV */
-
+extern ADC_Handle hadc_ext;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -145,7 +145,7 @@ int main(void)
   MX_IWDG_Init();
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
-
+ADC_Init(&hadc_ext, &hi2c2, ADS1115_PGA_4096, ADS1115_SPS_128);
   /* USER CODE END 2 */
 
   /* Init scheduler */
@@ -206,7 +206,11 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+    ADC_ReadAllChannels(&hadc_ext);
+    ADC_SendPacket(&hadc_ext);
+    osDelay(100);
   }
+  
   /* USER CODE END 3 */
 }
 
@@ -218,6 +222,7 @@ void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+  RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
 
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
@@ -228,7 +233,7 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.LSIState = RCC_LSI_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI_DIV2;
-  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL16;
+  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL12;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     Error_Handler();
@@ -243,7 +248,13 @@ void SystemClock_Config(void)
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USB;
+  PeriphClkInit.UsbClockSelection = RCC_USBCLKSOURCE_PLL;
+  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
   {
     Error_Handler();
   }
@@ -381,10 +392,8 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : Button_1_Pin Button_2_Pin Button_3_Pin Button_4_Pin
-                           Button_5_Pin */
-  GPIO_InitStruct.Pin = Button_1_Pin|Button_2_Pin|Button_3_Pin|Button_4_Pin
-                          |Button_5_Pin;
+  /*Configure GPIO pins : Button_1_Pin Button_2_Pin Button_3_Pin */
+  GPIO_InitStruct.Pin = Button_1_Pin|Button_2_Pin|Button_3_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
@@ -407,6 +416,8 @@ static void MX_GPIO_Init(void)
 /* USER CODE END Header_StartDefaultTask */
 void StartDefaultTask(void *argument)
 {
+  /* init code for USB_DEVICE */
+  MX_USB_DEVICE_Init();
   /* USER CODE BEGIN 5 */
 
 int new_voltage = start_voltage;
@@ -419,6 +430,8 @@ int new_voltage = start_voltage;
       new_voltage = start_voltage;
     }
     
+        ADC_ReadAllChannels(&hadc_ext);
+        
     
     osDelay(500); 
   }
@@ -435,11 +448,21 @@ int new_voltage = start_voltage;
 void StartTask02(void *argument)
 {
   /* USER CODE BEGIN StartTask02 */
+    osDelay(1000);  // ??????? ???? USB ????????????
   /* Infinite loop */
   for(;;)
   {
-    osDelay(1);
+    HAL_IWDG_Refresh(&hiwdg);
+
+    osSemaphoreAcquire(myBinarySem01Handle, osWaitForever);
+    COMM_SendPacket(hadc_ext.channels);  // ?????????
+    osSemaphoreRelease(myBinarySem01Handle);
+
+    COMM_ReceiveCommand();               // ??????
+
+    osDelay(100);
   }
+  
   /* USER CODE END StartTask02 */
 }
 
