@@ -25,7 +25,7 @@
 /* USER CODE BEGIN Includes */
 #include "DAC_control.h"
 #include "ADC_control.h"
-// #include "comm_control.h"
+#include "comm_control.h"
 
 /* USER CODE END Includes */
 
@@ -36,16 +36,18 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define SWEEP_STEP_MS  50
 /*---------------------------------------------------------Main variables----------------------------------------*/
-float start_voltage = 0;                                         /* Min. anode voltage*/
-float end_voltage = 0;                                           /* Max. anode voltage*/
-float max_current = 0;                                           /* If cathode-anode current is bigger than this value -> system alarm and stop */
-float step = 0;                                                  /* Value of one step in scan, set a voltage adding on PowerSupplyUnit to anode voltage*/
-float step_delay = 0;                                            /* Duration of one step for step method*/
-int number_of_points_in_scan = 0;                                /* Number of points for measurment*/
-int number_of_points_in_scan_delay = 0;                          /* Duration of one step for numofpoint method*/
-int npcc = 0;                                                    /* Number of Points for Calculation Correlation*/ 
+float start_voltage = 0;
+float end_voltage = 0;
+float max_current = 0;
+float step = 0;
+float step_delay = 0;
+int number_of_points_in_scan = 0;
+int number_of_points_in_scan_delay = 0;
+int npcc = 0;
 
+volatile ScanMode current_mode = MODE_IDLE;  /* ?????????? ????? — ????? */
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -206,8 +208,7 @@ ADC_Init(&hadc_ext, &hi2c2, ADS1115_PGA_4096, ADS1115_SPS_128);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-    ADC_ReadAllChannels(&hadc_ext);
-    ADC_SendPacket(&hadc_ext);
+    // ADC_ReadAllChannels(&hadc_ext);
     osDelay(100);
   }
   
@@ -416,28 +417,63 @@ static void MX_GPIO_Init(void)
 /* USER CODE END Header_StartDefaultTask */
 void StartDefaultTask(void *argument)
 {
-  /* init code for USB_DEVICE */
   MX_USB_DEVICE_Init();
-  /* USER CODE BEGIN 5 */
+  osDelay(500);
 
-int new_voltage = start_voltage;
-  for(;;)
+  /* USER CODE BEGIN 5 */
+for(;;)
   {
-    
-    DAC_SetVoltage(new_voltage); 
-    new_voltage += 500;
-    if (new_voltage >= 4095){
-      new_voltage = start_voltage;
+    //HAL_IWDG_Refresh(&hiwdg);
+
+    if (current_mode == MODE_IDLE)
+    {
+      HAL_GPIO_WritePin(LED_live_pulse_GPIO_Port,
+                        LED_live_pulse_Pin, GPIO_PIN_RESET);
+
+      osSemaphoreAcquire(myBinarySem01Handle, osWaitForever);
+      DAC_SetVoltage(0);
+      ADC_ReadAllChannels(&hadc_ext);
+      osSemaphoreRelease(myBinarySem01Handle);
+
+      osDelay(100);
     }
-    
+    else if (current_mode == MODE_SCAN)
+    {
+      /* ????????????? ? DAC ???? ? ?????????? ??????? */
+      int v_start = (int)(start_voltage / 3.3f * 4095.0f);
+      int v_end   = (int)(end_voltage   / 3.3f * 4095.0f);
+      int v_step  = (int)(step          / 3.3f * 4095.0f);
+
+      /* ?????? */
+      // if (v_step <= 0)       v_step = 10;
+      // if (v_end  <= v_start) v_end  = v_start + 100;
+
+      /* ????????? */
+      for (int v = v_start; v <= v_end; v += v_step)
+      {
+        HAL_IWDG_Refresh(&hiwdg);
+        if (current_mode != MODE_SCAN) break;
+
+        HAL_GPIO_TogglePin(LED_live_pulse_GPIO_Port, LED_live_pulse_Pin);
+
+        osSemaphoreAcquire(myBinarySem01Handle, osWaitForever);
+        DAC_SetVoltage(v);
         ADC_ReadAllChannels(&hadc_ext);
-        
-    
-    osDelay(500); 
+        osSemaphoreRelease(myBinarySem01Handle);
+
+        osDelay(SWEEP_STEP_MS);
+      }
+
+      if (current_mode == MODE_SCAN) {
+        osSemaphoreAcquire(myBinarySem01Handle, osWaitForever);
+        DAC_SetVoltage(0);
+        osSemaphoreRelease(myBinarySem01Handle);
+        osDelay(200);
+      }
+    }
   }
   /* USER CODE END 5 */
 }
-
 /* USER CODE BEGIN Header_StartTask02 */
 /**
 * @brief Function implementing the computerConnect thread.
@@ -448,21 +484,22 @@ int new_voltage = start_voltage;
 void StartTask02(void *argument)
 {
   /* USER CODE BEGIN StartTask02 */
-    osDelay(1000);  // ??????? ???? USB ????????????
-  /* Infinite loop */
+    osDelay(1000);
+
   for(;;)
   {
-    HAL_IWDG_Refresh(&hiwdg);
+    // HAL_IWDG_Refresh(&hiwdg);
 
+    /* ????????? — ???????? ????????? ?? ???????????? hadc_ext */
     osSemaphoreAcquire(myBinarySem01Handle, osWaitForever);
-    COMM_SendPacket(hadc_ext.channels);  // ?????????
+    COMM_SendPacket(hadc_ext.channels);
     osSemaphoreRelease(myBinarySem01Handle);
 
-    COMM_ReceiveCommand();               // ??????
+    /* ?????? — ??? ????????, ?????? ????? rx_buf */
+    COMM_ReceiveCommand();
 
     osDelay(100);
   }
-  
   /* USER CODE END StartTask02 */
 }
 

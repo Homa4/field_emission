@@ -123,17 +123,4 @@ float ADC_ToVoltage(ADC_Handle *h, int16_t raw)
 /*  ????????? ?????? ?? UART                          */
 /*  ??????: [0xAA][0xBB][ch0H][ch0L]...[ch3H][ch3L]  */
 /* -------------------------------------------------- */
-void ADC_SendPacket(ADC_Handle *h)
-{
-    uint8_t packet[10];
 
-    packet[0] = 0xAA;
-    packet[1] = 0xBB;
-
-    for (uint8_t i = 0; i < 4; i++) {
-        packet[2 + i * 2]     = (h->channels[i] >> 8) & 0xFF;
-        packet[2 + i * 2 + 1] =  h->channels[i]       & 0xFF;
-    }
-
-    CDC_Transmit_FS(packet, 10);
-}

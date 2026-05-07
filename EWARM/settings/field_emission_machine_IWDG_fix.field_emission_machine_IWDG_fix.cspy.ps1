@@ -23,9 +23,9 @@
 
 if ($debugfile -eq "")
 {
-& "D:\IAR\common\bin\cspybat" -f "C:\Users\pedro\Documents\important\institute of physics\Field emission\field_emission_machine\field_emission_machine_IWDG_fix\EWARM\settings\field_emission_machine_IWDG_fix.field_emission_machine_IWDG_fix.general.xcl" --backend -f "C:\Users\pedro\Documents\important\institute of physics\Field emission\field_emission_machine\field_emission_machine_IWDG_fix\EWARM\settings\field_emission_machine_IWDG_fix.field_emission_machine_IWDG_fix.driver.xcl" 
+& "C:\Program Files\IAR Systems\Embedded Workbench 9.2\common\bin\cspybat" -f "D:\phis_institute\field_emission\EWARM\settings\field_emission_machine_IWDG_fix.field_emission_machine_IWDG_fix.general.xcl" --backend -f "D:\phis_institute\field_emission\EWARM\settings\field_emission_machine_IWDG_fix.field_emission_machine_IWDG_fix.driver.xcl" 
 }
 else
 {
-& "D:\IAR\common\bin\cspybat" -f "C:\Users\pedro\Documents\important\institute of physics\Field emission\field_emission_machine\field_emission_machine_IWDG_fix\EWARM\settings\field_emission_machine_IWDG_fix.field_emission_machine_IWDG_fix.general.xcl" --debug_file=$debugfile --backend -f "C:\Users\pedro\Documents\important\institute of physics\Field emission\field_emission_machine\field_emission_machine_IWDG_fix\EWARM\settings\field_emission_machine_IWDG_fix.field_emission_machine_IWDG_fix.driver.xcl" 
+& "C:\Program Files\IAR Systems\Embedded Workbench 9.2\common\bin\cspybat" -f "D:\phis_institute\field_emission\EWARM\settings\field_emission_machine_IWDG_fix.field_emission_machine_IWDG_fix.general.xcl" --debug_file=$debugfile --backend -f "D:\phis_institute\field_emission\EWARM\settings\field_emission_machine_IWDG_fix.field_emission_machine_IWDG_fix.driver.xcl" 
 }

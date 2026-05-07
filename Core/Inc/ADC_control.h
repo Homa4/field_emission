@@ -56,7 +56,6 @@ void ADC_Init(ADC_Handle *h,
 int16_t ADC_ReadChannel(ADC_Handle *h, uint8_t channel);
 void    ADC_ReadAllChannels(ADC_Handle *h);
 float   ADC_ToVoltage(ADC_Handle *h, int16_t raw);
-void    ADC_SendPacket(ADC_Handle *h);
 
 /* FreeRTOS ?????? — ???????????? ? freertos.c */
 void    ADC_Task(void *argument);
