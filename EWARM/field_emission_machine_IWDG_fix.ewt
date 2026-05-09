@@ -1478,6 +1478,9 @@
                     <name>$PROJ_DIR$\..\Core\Src\comm_control.c</name>
                 </file>
                 <file>
+                    <name>$PROJ_DIR$\..\Core\Src\communication_logic.c</name>
+                </file>
+                <file>
                     <name>$PROJ_DIR$\..\Core\Src\DAC_control.c</name>
                 </file>
                 <file>

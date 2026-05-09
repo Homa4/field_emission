@@ -74,7 +74,7 @@ int16_t ADC_ReadChannel(ADC_Handle *h, uint8_t channel)
 
     /* ????????? ??????-??????? */
     if (HAL_I2C_Master_Transmit(h->hi2c, ADS1115_ADDR,
-                                 cfg_buf, 3, 100) != HAL_OK) {
+                                 cfg_buf, 3, 5) != HAL_OK) {
         return 0;
     }
 
@@ -84,14 +84,14 @@ int16_t ADC_ReadChannel(ADC_Handle *h, uint8_t channel)
     /* ???????? ??????? ?????????? */
     uint8_t reg = ADS1115_REG_CONVERT;
     if (HAL_I2C_Master_Transmit(h->hi2c, ADS1115_ADDR,
-                                 &reg, 1, 100) != HAL_OK) {
+                                 &reg, 1, 5) != HAL_OK) {
         return 0;
     }
 
     /* ??????? 2 ????? ?????????? */
     uint8_t raw[2] = {0, 0};
     if (HAL_I2C_Master_Receive(h->hi2c, ADS1115_ADDR,
-                                raw, 2, 100) != HAL_OK) {
+                                raw, 2, 5) != HAL_OK) {
         return 0;
     }
 

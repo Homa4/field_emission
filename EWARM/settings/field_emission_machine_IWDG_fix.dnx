@@ -1,19 +1,19 @@
 <?xml version="1.0"?>
 <settings>
     <StLinkDriver>
-        <stlinkserialNo>130010000A2D373637365744</stlinkserialNo>
+        <stlinkserialNo>303030303030303030303031</stlinkserialNo>
         <stlinkfoundProbes />
-        <stlinkResetStyle>0</stlinkResetStyle>
-        <stlinkResetStrategy>2</stlinkResetStrategy>
         <LeaveTargetRunning>_ 0</LeaveTargetRunning>
         <CStepIntDis>_ 0</CStepIntDis>
+        <stlinkResetStyle>0</stlinkResetStyle>
+        <stlinkResetStrategy>2</stlinkResetStrategy>
     </StLinkDriver>
     <PlDriver>
         <FirstRun>0</FirstRun>
-        <MemConfigValue>C:\Program Files\IAR Systems\Embedded Workbench 9.2\arm\config\debugger\ST\STM32F103C8.ddf</MemConfigValue>
+        <MemConfigValue>D:\IAR\arm\config\debugger\ST\STM32F103C8.ddf</MemConfigValue>
     </PlDriver>
     <DebugChecksum>
-        <Checksum>2282962915</Checksum>
+        <Checksum>2562214912</Checksum>
     </DebugChecksum>
     <Exceptions>
         <StopOnUncaught>_ 0</StopOnUncaught>
@@ -52,11 +52,11 @@
     </CallStack>
     <SWOTraceHWSettings>
         <OverrideDefaultClocks>0</OverrideDefaultClocks>
-        <CpuClock>48000000</CpuClock>
+        <CpuClock>72000000</CpuClock>
         <ClockAutoDetect>0</ClockAutoDetect>
         <ClockWanted>2000000</ClockWanted>
         <JtagSpeed>2000000</JtagSpeed>
-        <Prescaler>24</Prescaler>
+        <Prescaler>36</Prescaler>
         <TimeStampPrescIndex>0</TimeStampPrescIndex>
         <TimeStampPrescData>0</TimeStampPrescData>
         <PcSampCYCTAP>1</PcSampCYCTAP>
@@ -69,9 +69,46 @@
         <ITMlogFile>$PROJ_DIR$\ITM.log</ITMlogFile>
     </SWOTraceHWSettings>
     <ArmDriver>
-        <EnableCache>0</EnableCache>
         <EnforceMemoryConfiguration>1</EnforceMemoryConfiguration>
+        <EnableCache>0</EnableCache>
     </ArmDriver>
+    <PlDdfRanges>
+        <ConfigRanges0>Memory ROM 536862720 6144 1</ConfigRanges0>
+        <ConfigRanges1>Memory OptionBytes 536868864 64 2</ConfigRanges1>
+        <ConfigRanges2>Memory Periph0 1073741824 144384 2</ConfigRanges2>
+        <ConfigRanges3>Memory Periph_BitBand 1107296256 4620288 2</ConfigRanges3>
+        <ConfigRanges4>Memory ExtDev 1610612736 1073741824 2</ConfigRanges4>
+        <ConfigRanges5>Memory Periph1 2684354560 4096 2</ConfigRanges5>
+        <ConfigRanges6>Memory SystemSFR 3758096384 1048576 2</ConfigRanges6>
+        <ConfigRanges7>Memory RemapMem 0 65536 1</ConfigRanges7>
+        <ConfigRanges8>Memory Flash 134217728 65536 1</ConfigRanges8>
+        <ConfigRanges9>Memory RAM 536870912 20480 0</ConfigRanges9>
+        <ConfigRanges10>Memory RAM_BitBand 570425344 655360 0</ConfigRanges10>
+    </PlDdfRanges>
+    <PlCacheRanges>
+        <CustomRanges0>0 0 65536 1 0</CustomRanges0>
+        <CustomRangesText0 />
+        <CustomRanges1>0 134217728 65536 1 0</CustomRanges1>
+        <CustomRangesText1 />
+        <CustomRanges2>0 536862720 6144 1 0</CustomRanges2>
+        <CustomRangesText2 />
+        <CustomRanges3>0 536868864 64 2 0</CustomRanges3>
+        <CustomRangesText3 />
+        <CustomRanges4>0 536870912 20480 0 0</CustomRanges4>
+        <CustomRangesText4 />
+        <CustomRanges5>0 570425344 655360 0 0</CustomRanges5>
+        <CustomRangesText5 />
+        <CustomRanges6>0 1073741824 144384 2 0</CustomRanges6>
+        <CustomRangesText6 />
+        <CustomRanges7>0 1107296256 4620288 2 0</CustomRanges7>
+        <CustomRangesText7 />
+        <CustomRanges8>0 1610612736 1073741824 2 0</CustomRanges8>
+        <CustomRangesText8 />
+        <CustomRanges9>0 2684354560 4096 2 0</CustomRanges9>
+        <CustomRangesText9 />
+        <CustomRanges10>0 3758096384 1048576 2 0</CustomRanges10>
+        <CustomRangesText10 />
+    </PlCacheRanges>
     <Trace2>
         <Enabled>0</Enabled>
         <ShowSource>0</ShowSource>

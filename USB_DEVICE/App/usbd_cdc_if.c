@@ -1,28 +1,14 @@
 /* USER CODE BEGIN Header */
-/**
-  ******************************************************************************
-  * @file           : usbd_cdc_if.c
-  * @version        : v2.0_Cube
-  * @brief          : Usb device for Virtual Com Port.
-  ******************************************************************************
-  * @attention
-  *
-  * Copyright (c) 2026 STMicroelectronics.
-  * All rights reserved.
-  *
-  * This software is licensed under terms that can be found in the LICENSE file
-  * in the root directory of this software component.
-  * If no LICENSE file comes with this software, it is provided AS-IS.
-  *
-  ******************************************************************************
-  */
 /* USER CODE END Header */
 
 /* Includes ------------------------------------------------------------------*/
 #include "usbd_cdc_if.h"
 
 /* USER CODE BEGIN INCLUDE */
-
+#include "communication_logic.h"
+extern volatile uint32_t debug_packet_counter;
+extern uint8_t is_scanning;
+extern volatile uint16_t start_v, stop_v, step_v, delay_v;
 /* USER CODE END INCLUDE */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -30,8 +16,6 @@
 /* Private macro -------------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-/* Private variables ---------------------------------------------------------*/
-
 /* USER CODE END PV */
 
 /** @addtogroup STM32_USB_OTG_DEVICE_LIBRARY
@@ -49,9 +33,6 @@
   */
 
 /* USER CODE BEGIN PRIVATE_TYPES */
-uint8_t rx_buf[64];
-uint32_t rx_len = 0;
-uint8_t rx_ready = 0;
 /* USER CODE END PRIVATE_TYPES */
 
 /**
@@ -76,7 +57,6 @@ uint8_t rx_ready = 0;
   */
 
 /* USER CODE BEGIN PRIVATE_MACRO */
-
 /* USER CODE END PRIVATE_MACRO */
 
 /**
@@ -96,7 +76,6 @@ uint8_t UserRxBufferFS[APP_RX_DATA_SIZE];
 uint8_t UserTxBufferFS[APP_TX_DATA_SIZE];
 
 /* USER CODE BEGIN PRIVATE_VARIABLES */
-
 /* USER CODE END PRIVATE_VARIABLES */
 
 /**
@@ -111,7 +90,6 @@ uint8_t UserTxBufferFS[APP_TX_DATA_SIZE];
 extern USBD_HandleTypeDef hUsbDeviceFS;
 
 /* USER CODE BEGIN EXPORTED_VARIABLES */
-
 /* USER CODE END EXPORTED_VARIABLES */
 
 /**
@@ -129,7 +107,6 @@ static int8_t CDC_Control_FS(uint8_t cmd, uint8_t* pbuf, uint16_t length);
 static int8_t CDC_Receive_FS(uint8_t* pbuf, uint32_t *Len);
 
 /* USER CODE BEGIN PRIVATE_FUNCTIONS_DECLARATION */
-
 /* USER CODE END PRIVATE_FUNCTIONS_DECLARATION */
 
 /**
@@ -152,10 +129,9 @@ USBD_CDC_ItfTypeDef USBD_Interface_fops_FS =
 static int8_t CDC_Init_FS(void)
 {
   /* USER CODE BEGIN 3 */
-  /* Set Application Buffers */
   USBD_CDC_SetTxBuffer(&hUsbDeviceFS, UserTxBufferFS, 0);
   USBD_CDC_SetRxBuffer(&hUsbDeviceFS, UserRxBufferFS);
-  return (USBD_OK);
+  return (USBD_OK); // ????'??????
   /* USER CODE END 3 */
 }
 
@@ -258,18 +234,22 @@ static int8_t CDC_Control_FS(uint8_t cmd, uint8_t* pbuf, uint16_t length)
   * @param  Len: Number of data received (in bytes)
   * @retval Result of the operation: USBD_OK if all operations are OK else USBD_FAIL
   */
+/* usbd_cdc_if.c */
 static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
 {
-  /* USER CODE BEGIN 6 */
-  memcpy(rx_buf, Buf, *Len);
-  rx_len = *Len;
-  rx_ready = 1;  // ????????? ?? ???? ???????
+  /* ??????: S:0000;E:4095;T:0500;D:0100; */
+  if (Buf[0] == 'S') {
+    sscanf((char*)Buf, "S:%hu;E:%hu;T:%hu;D:%hu;", &start_v, &stop_v, &step_v, &delay_v);
+    is_scanning = 1;
+  }
+  else if (Buf[0] == '0') {
+    is_scanning = 0;
+  }
   
-  USBD_CDC_SetRxBuffer(&hUsbDeviceFS, &Buf[0]);
   USBD_CDC_ReceivePacket(&hUsbDeviceFS);
   return (USBD_OK);
-  /* USER CODE END 6 */
 }
+
 
 /**
   * @brief  CDC_Transmit_FS
@@ -286,6 +266,7 @@ uint8_t CDC_Transmit_FS(uint8_t* Buf, uint16_t Len)
 {
   uint8_t result = USBD_OK;
   /* USER CODE BEGIN 7 */
+  // ????? ?? ??? ?????:
   USBD_CDC_HandleTypeDef *hcdc = (USBD_CDC_HandleTypeDef*)hUsbDeviceFS.pClassData;
   if (hcdc->TxState != 0){
     return USBD_BUSY;
@@ -297,7 +278,6 @@ uint8_t CDC_Transmit_FS(uint8_t* Buf, uint16_t Len)
 }
 
 /* USER CODE BEGIN PRIVATE_FUNCTIONS_IMPLEMENTATION */
-
 /* USER CODE END PRIVATE_FUNCTIONS_IMPLEMENTATION */
 
 /**

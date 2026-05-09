@@ -26,7 +26,8 @@
 #include "DAC_control.h"
 #include "ADC_control.h"
 #include "comm_control.h"
-
+#include "communication_logic.h"
+#include "usbd_cdc_if.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -37,17 +38,27 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 #define SWEEP_STEP_MS  50
+#define MAX_POINTS 500
 /*---------------------------------------------------------Main variables----------------------------------------*/
-float start_voltage = 0;
-float end_voltage = 0;
-float max_current = 0;
-float step = 0;
-float step_delay = 0;
+float start_voltage = 0.0f;
+float end_voltage = 2000.0f;
+float max_current = 0.0f;
+float step = 10.0f;
+
 int number_of_points_in_scan = 0;
 int number_of_points_in_scan_delay = 0;
 int npcc = 0;
+volatile uint8_t is_scanning = 0;
+volatile uint32_t step_delay = 100;
+int16_t buffer_ch0[MAX_POINTS];
+int16_t buffer_ch1[MAX_POINTS];
+uint16_t points_captured = 0;
 
-volatile ScanMode current_mode = MODE_IDLE;  /* ?????????? ????? — ????? */
+  volatile uint16_t start_v = 0;
+  volatile uint16_t stop_v = 0;
+  volatile uint16_t step_v = 0;
+  volatile uint16_t delay_v = 0;
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -62,19 +73,19 @@ IWDG_HandleTypeDef hiwdg;
 
 UART_HandleTypeDef huart2;
 
-/* Definitions for defaultTask */
-osThreadId_t defaultTaskHandle;
-const osThreadAttr_t defaultTask_attributes = {
-  .name = "defaultTask",
+/* Definitions for Measure */
+osThreadId_t MeasureHandle;
+const osThreadAttr_t Measure_attributes = {
+  .name = "Measure",
   .stack_size = 256 * 4,
-  .priority = (osPriority_t) osPriorityHigh,
+  .priority = (osPriority_t) osPriorityLow,
 };
 /* Definitions for computerConnect */
 osThreadId_t computerConnectHandle;
 const osThreadAttr_t computerConnect_attributes = {
   .name = "computerConnect",
   .stack_size = 256 * 4,
-  .priority = (osPriority_t) osPriorityLow,
+  .priority = (osPriority_t) osPriorityHigh,
 };
 /* Definitions for Queue */
 osMessageQueueId_t QueueHandle;
@@ -93,6 +104,7 @@ const osSemaphoreAttr_t myBinarySem01_attributes = {
 };
 /* USER CODE BEGIN PV */
 extern ADC_Handle hadc_ext;
+uint8_t rx_buffer[5]; // ????? ??? ??????: Header + Cmd + DataHigh + DataLow + Checksum
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -147,7 +159,9 @@ int main(void)
   MX_IWDG_Init();
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
-ADC_Init(&hadc_ext, &hi2c2, ADS1115_PGA_4096, ADS1115_SPS_128);
+  ADC_Init(&hadc_ext, &hi2c2, ADS1115_PGA_4096, ADS1115_SPS_128); 
+  MX_USB_DEVICE_Init();
+
   /* USER CODE END 2 */
 
   /* Init scheduler */
@@ -182,8 +196,8 @@ ADC_Init(&hadc_ext, &hi2c2, ADS1115_PGA_4096, ADS1115_SPS_128);
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
-  /* creation of defaultTask */
-  defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
+  /* creation of Measure */
+  MeasureHandle = osThreadNew(StartDefaultTask, NULL, &Measure_attributes);
 
   /* creation of computerConnect */
   computerConnectHandle = osThreadNew(StartTask02, NULL, &computerConnect_attributes);
@@ -228,13 +242,14 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI|RCC_OSCILLATORTYPE_LSI;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_LSI|RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+  RCC_OscInitStruct.HSEPredivValue = RCC_HSE_PREDIV_DIV1;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
-  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
   RCC_OscInitStruct.LSIState = RCC_LSI_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI_DIV2;
-  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL12;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
+  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL9;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     Error_Handler();
@@ -249,12 +264,12 @@ void SystemClock_Config(void)
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_1) != HAL_OK)
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
   {
     Error_Handler();
   }
   PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USB;
-  PeriphClkInit.UsbClockSelection = RCC_USBCLKSOURCE_PLL;
+  PeriphClkInit.UsbClockSelection = RCC_USBCLKSOURCE_PLL_DIV1_5;
   if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
   {
     Error_Handler();
@@ -370,6 +385,7 @@ static void MX_GPIO_Init(void)
 
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOC_CLK_ENABLE();
+  __HAL_RCC_GPIOD_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
@@ -406,6 +422,29 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 
+void USB_SendADCData(int16_t *channels) {
+    uint8_t report[10];
+    report[0] = 0xBB; // ????????? ?????? ????? (????????? ??? 0xAA)
+    report[1] = 0x01; // ??? ?????: ???
+    
+    // ??????? 4 ?????? (?? 2 ????? ?? ?????)
+    for(int i = 0; i < 4; i++) {
+        report[2 + (i*2)] = (uint8_t)(channels[i] >> 8);
+        report[3 + (i*2)] = (uint8_t)(channels[i] & 0xFF);
+    }
+    
+    CDC_Transmit_FS(report, 10);
+}
+
+
+void SmartDelay(uint16_t delay_ms) {
+    for (uint16_t i = 0; i < delay_ms; i++) {
+        if (is_scanning == 0) return; // ???? ??????? ???? — ??????? ????????
+        osDelay(1); // ??????? ????? ? 1 ??
+    }
+}
+
+
 /* USER CODE END 4 */
 
 /* USER CODE BEGIN Header_StartDefaultTask */
@@ -417,63 +456,41 @@ static void MX_GPIO_Init(void)
 /* USER CODE END Header_StartDefaultTask */
 void StartDefaultTask(void *argument)
 {
-  MX_USB_DEVICE_Init();
-  osDelay(500);
-
-  /* USER CODE BEGIN 5 */
-for(;;)
+  for(;;)
   {
-    //HAL_IWDG_Refresh(&hiwdg);
-
-    if (current_mode == MODE_IDLE)
+    if (is_scanning == 1) 
     {
-      HAL_GPIO_WritePin(LED_live_pulse_GPIO_Port,
-                        LED_live_pulse_Pin, GPIO_PIN_RESET);
-
-      osSemaphoreAcquire(myBinarySem01Handle, osWaitForever);
-      DAC_SetVoltage(0);
-      ADC_ReadAllChannels(&hadc_ext);
-      osSemaphoreRelease(myBinarySem01Handle);
-
-      osDelay(100);
-    }
-    else if (current_mode == MODE_SCAN)
-    {
-      /* ????????????? ? DAC ???? ? ?????????? ??????? */
-      int v_start = (int)(start_voltage / 3.3f * 4095.0f);
-      int v_end   = (int)(end_voltage   / 3.3f * 4095.0f);
-      int v_step  = (int)(step          / 3.3f * 4095.0f);
-
-      /* ?????? */
-      // if (v_step <= 0)       v_step = 10;
-      // if (v_end  <= v_start) v_end  = v_start + 100;
-
-      /* ????????? */
-      for (int v = v_start; v <= v_end; v += v_step)
+      for (uint16_t v = start_v; v <= stop_v; v += step_v) 
       {
-        HAL_IWDG_Refresh(&hiwdg);
-        if (current_mode != MODE_SCAN) break;
-
-        HAL_GPIO_TogglePin(LED_live_pulse_GPIO_Port, LED_live_pulse_Pin);
-
-        osSemaphoreAcquire(myBinarySem01Handle, osWaitForever);
+        if (is_scanning == 0) break;
+        
         DAC_SetVoltage(v);
-        ADC_ReadAllChannels(&hadc_ext);
-        osSemaphoreRelease(myBinarySem01Handle);
+        
+        // 1. ??????? ???????????? (????? ??? ????????)
+        SmartDelay(delay_v); 
+        
+        if (is_scanning == 0) break; // ????????? ????? ???????????
 
-        osDelay(SWEEP_STEP_MS);
-      }
+        // 2. ???????? ???? ? ????? ????????
+        int16_t raw0 = ADC_ReadChannel(&hadc_ext, 0); 
+        int16_t raw1 = ADC_ReadChannel(&hadc_ext, 1);
 
-      if (current_mode == MODE_SCAN) {
-        osSemaphoreAcquire(myBinarySem01Handle, osWaitForever);
-        DAC_SetVoltage(0);
-        osSemaphoreRelease(myBinarySem01Handle);
-        osDelay(200);
+        // 3. ???????????? ????? ?????
+        char data_msg[64];
+        int len = sprintf(data_msg, "D:%hu;A0:%d;A1:%d\r\n", v, raw0, raw1);
+        CDC_Transmit_FS((uint8_t*)data_msg, len);
       }
+      
+      DAC_SetVoltage(0);
+      is_scanning = 0;
+      
+      uint8_t msg[] = "DONE\r\n";
+      CDC_Transmit_FS(msg, 6);
     }
+    osDelay(10);
   }
-  /* USER CODE END 5 */
 }
+
 /* USER CODE BEGIN Header_StartTask02 */
 /**
 * @brief Function implementing the computerConnect thread.
@@ -484,21 +501,12 @@ for(;;)
 void StartTask02(void *argument)
 {
   /* USER CODE BEGIN StartTask02 */
-    osDelay(1000);
+
 
   for(;;)
   {
-    // HAL_IWDG_Refresh(&hiwdg);
-
-    /* ????????? — ???????? ????????? ?? ???????????? hadc_ext */
-    osSemaphoreAcquire(myBinarySem01Handle, osWaitForever);
-    COMM_SendPacket(hadc_ext.channels);
-    osSemaphoreRelease(myBinarySem01Handle);
-
-    /* ?????? — ??? ????????, ?????? ????? rx_buf */
-    COMM_ReceiveCommand();
-
-    osDelay(100);
+  HAL_IWDG_Refresh(&hiwdg); // ??????? ?????? ?????????? ?? "?????" ??????
+  osDelay(100);
   }
   /* USER CODE END StartTask02 */
 }
